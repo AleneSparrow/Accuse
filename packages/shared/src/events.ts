@@ -1,4 +1,4 @@
-import type { ChatMessage, GameResult, LobbyState, RoundState } from "./types";
+import type { ChatMessage, GameResult, LobbyState, RoundState } from "./types.js";
 
 export type ServerEvent =
   | { type: "lobby_state"; lobby: LobbyState }

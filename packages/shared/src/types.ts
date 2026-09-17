@@ -1,5 +1,4 @@
-import type { SCENARIO_CATEGORIES } from "./constants";
-
+import type { SCENARIO_CATEGORIES } from "./constants.js";
 export type ScenarioCategory = (typeof SCENARIO_CATEGORIES)[number];
 
 export type LobbyStatus = "waiting" | "in_progress" | "finished";

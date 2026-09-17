@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { MAX_ANSWER_LENGTH, MAX_CHAT_MESSAGE_LENGTH } from "./constants";
+import { MAX_ANSWER_LENGTH, MAX_CHAT_MESSAGE_LENGTH } from "./constants.js";
 
 export const telegramInitDataSchema = z.object({
   initData: z.string().min(1, "initData is required"),
