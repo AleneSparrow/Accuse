@@ -1,0 +1,104 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String   @id @default(uuid())
+  telegramId  String   @unique
+  displayName String
+  avatarUrl   String?
+  wins        Int      @default(0)
+  losses      Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  hostedLobbies Lobby[]       @relation("HostedLobbies")
+  lobbyPlayers  LobbyPlayer[]
+  answers       Answer[]
+  votes         Vote[]
+}
+
+model Lobby {
+  id           String   @id @default(uuid())
+  code         String   @unique
+  status       String   @default("waiting") // waiting | in_progress | finished
+  hostId       String
+  host         User     @relation("HostedLobbies", fields: [hostId], references: [id])
+  totalRounds  Int      @default(3)
+  currentRound Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  players LobbyPlayer[]
+  rounds  Round[]
+
+  @@index([code])
+}
+
+model LobbyPlayer {
+  id        String   @id @default(uuid())
+  lobbyId   String
+  lobby     Lobby    @relation(fields: [lobbyId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  isReady   Boolean  @default(false)
+  isHost    Boolean  @default(false)
+  connected Boolean  @default(false)
+  joinedAt  DateTime @default(now())
+
+  answers Answer[]
+  votes   Vote[] @relation("VoterPlayer")
+
+  @@unique([lobbyId, userId])
+}
+
+model Round {
+  roundNumber    Int
+  id             String    @id @default(uuid())
+  lobbyId        String
+  lobby          Lobby     @relation(fields: [lobbyId], references: [id], onDelete: Cascade)
+  category       String
+  prompt         String
+  impostorPlayerId String
+  phase          String    @default("prompt")
+  phaseEndsAt    DateTime?
+  createdAt      DateTime  @default(now())
+
+  answers Answer[]
+  votes   Vote[]
+
+  @@unique([lobbyId, roundNumber])
+}
+
+model Answer {
+  id               String      @id @default(uuid())
+  roundId          String
+  round            Round       @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  lobbyPlayerId    String
+  lobbyPlayer      LobbyPlayer @relation(fields: [lobbyPlayerId], references: [id])
+  userId           String
+  user             User        @relation(fields: [userId], references: [id])
+  text             String
+  isAutoSubmitted  Boolean     @default(false)
+  submittedAt      DateTime    @default(now())
+
+  @@unique([roundId, lobbyPlayerId])
+}
+
+model Vote {
+  id            String      @id @default(uuid())
+  roundId       String
+  round         Round       @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  voterPlayerId String
+  voterPlayer   LobbyPlayer @relation("VoterPlayer", fields: [voterPlayerId], references: [id])
+  voterId       String
+  voter         User        @relation(fields: [voterId], references: [id])
+  votedForId    String
+  createdAt     DateTime    @default(now())
+
+  @@unique([roundId, voterPlayerId])
+}

@@ -1,0 +1,32 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    ports:
+      - "4000:4000"
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: "file:/data/accuse.db"
+      PORT: "4000"
+    volumes:
+      - accuse-db:/data
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        VITE_API_URL: ${API_PUBLIC_URL:-http://localhost:4000}
+        VITE_WS_URL: ${VITE_WS_URL:-ws://localhost:4000/ws}
+        VITE_BOT_USERNAME: ${VITE_BOT_USERNAME:-your_bot}
+    ports:
+      - "8080:80"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  accuse-db:
