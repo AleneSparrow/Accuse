@@ -86,7 +86,7 @@ export function Home() {
           </button>
         </div>
 
-        {!isTelegram && (
+        {!isTelegram() && (
           <div className="card stack">
             <p className="tagline" style={{ margin: 0 }}>
               Not running inside Telegram. For local two-browser testing, set a dev identity (the API will still

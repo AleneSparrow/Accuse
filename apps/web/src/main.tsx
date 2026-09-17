@@ -5,12 +5,21 @@ import { App } from "./App";
 import { initTelegram } from "./lib/telegram";
 import "./styles/theme.css";
 
-initTelegram();
+try {
+  initTelegram();
+} catch (e) {
+  console.error("initTelegram failed", e);
+}
 
-ReactDOM.createRoot(document.getElementById("root")!).render(
+const root = document.getElementById("root");
+if (!root) {
+  throw new Error("#root missing");
+}
+
+ReactDOM.createRoot(root).render(
   <React.StrictMode>
     <HashRouter>
       <App />
     </HashRouter>
-  </React.StrictMode>
+  </React.StrictMode>,
 );
