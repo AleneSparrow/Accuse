@@ -13,6 +13,7 @@ export interface PlayerConn {
   ws: WebSocket | null;
   wins: number;
   losses: number;
+  isSupporter: boolean;
 }
 
 export interface RoundAnswerInternal {

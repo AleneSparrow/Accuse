@@ -9,6 +9,8 @@ export const PHASE_DURATIONS_MS = {
   reveal: 12_000,
 } as const;
 
+export const SUPPORTER_STARS_PRICE = 50;
+
 export const LOBBY_CODE_LENGTH = 5;
 export const LOBBY_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no O/0/I/1
 
@@ -22,6 +24,3 @@ export const SCENARIO_CATEGORIES = [
   "workplace",
   "sci-fi",
 ] as const;
-
-// TODO(stars): v2 monetization hook — Telegram Stars cosmetics (avatar
-// frames, scenario packs, name colors). No purchase flow in v1.

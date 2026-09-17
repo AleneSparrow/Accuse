@@ -24,6 +24,10 @@ export function joinLobby(code: string) {
   return post<{ lobby: LobbyState }>("/api/lobby/join", { initData: getInitData(), code });
 }
 
+export function createSupporterInvoiceLink() {
+  return post<{ link: string }>("/api/payments/support/invoice-link", { initData: getInitData() });
+}
+
 export async function fetchLeaderboard() {
   const res = await fetch(`${API_URL}/api/leaderboard`);
   if (!res.ok) throw new ApiError("Failed to load leaderboard");

@@ -4,6 +4,7 @@ import websocketPlugin from "@fastify/websocket";
 import { env, corsOrigins } from "./env.js";
 import { registerLobbyRoutes } from "./routes/lobby.js";
 import { registerLeaderboardRoutes } from "./routes/leaderboard.js";
+import { registerPaymentRoutes } from "./routes/payments.js";
 import { registerTelegramWebhook, setTelegramWebhook } from "./telegram/bot.js";
 import { registerWebsocket } from "./ws/handler.js";
 
@@ -26,6 +27,7 @@ app.get("/health", async () => ({ ok: true }));
 
 registerLobbyRoutes(app);
 registerLeaderboardRoutes(app);
+registerPaymentRoutes(app);
 registerTelegramWebhook(app);
 registerWebsocket(app);
 

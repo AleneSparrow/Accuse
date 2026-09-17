@@ -1,6 +1,7 @@
 import { Bot, InlineKeyboard, Keyboard, webhookCallback, type Context } from "grammy";
 import type { FastifyInstance } from "fastify";
 import { env } from "../env.js";
+import { lobbyManager } from "../game/manager.js";
 
 export const bot = env.TELEGRAM_BOT_TOKEN ? new Bot(env.TELEGRAM_BOT_TOKEN) : null;
 
@@ -18,6 +19,30 @@ if (bot) {
     if (ctx.chat.type !== "private") return;
     if (ctx.message.text.startsWith("/")) return;
     await sendOpenGame(ctx);
+  });
+
+  // Telegram Stars payments: must answer within 10s or the payment fails client-side.
+  bot.on("pre_checkout_query", async (ctx) => {
+    try {
+      await ctx.answerPreCheckoutQuery(true);
+    } catch (err) {
+      console.error("[bot] answerPreCheckoutQuery failed", err);
+    }
+  });
+
+  bot.on("message:successful_payment", async (ctx) => {
+    const payment = ctx.message.successful_payment;
+    try {
+      await lobbyManager.creditStarPayment(
+        String(ctx.from.id),
+        payment.telegram_payment_charge_id,
+        payment.total_amount,
+        payment.invoice_payload,
+      );
+      await ctx.reply("⭐ Thank you for supporting ACCUSE! Your supporter badge is live in every lobby.");
+    } catch (err) {
+      console.error("[bot] failed to credit star payment", err);
+    }
   });
 
   bot.on("inline_query", async (ctx) => {
@@ -101,7 +126,7 @@ export async function setTelegramWebhook() {
   if (!bot || !env.API_PUBLIC_URL) return;
   const url = `${env.API_PUBLIC_URL}/telegram/webhook/${env.TELEGRAM_WEBHOOK_SECRET}`;
   await bot.api.setWebhook(url, {
-    allowed_updates: ["message", "callback_query", "inline_query"],
+    allowed_updates: ["message", "callback_query", "inline_query", "pre_checkout_query"],
     drop_pending_updates: true,
   });
 }

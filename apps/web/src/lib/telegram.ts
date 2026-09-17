@@ -11,6 +11,7 @@ type TelegramWebApp = {
   };
   openTelegramLink?: (url: string) => void;
   switchInlineQuery?: (query: string, choose_chat_types?: string[]) => void;
+  openInvoice?: (url: string, callback: (status: "paid" | "cancelled" | "failed" | "pending") => void) => void;
 };
 
 declare global {
@@ -86,4 +87,21 @@ export function switchToInlineInvite(lobbyCode: string) {
   } catch {
     // ignore
   }
+}
+
+/**
+ * Opens Telegram's native Stars payment sheet for an invoice link created via
+ * the Bot API. Resolves with the final status once the sheet closes. Only
+ * works inside the Telegram client — the caller should gate this behind
+ * isTelegram().
+ */
+export function openInvoice(link: string): Promise<"paid" | "cancelled" | "failed" | "pending"> {
+  return new Promise((resolve, reject) => {
+    const wa = getWebApp();
+    if (!wa?.openInvoice) {
+      reject(new Error("Payments are only available inside Telegram"));
+      return;
+    }
+    wa.openInvoice(link, (status) => resolve(status));
+  });
 }

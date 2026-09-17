@@ -1,4 +1,5 @@
 import { nanoid, customAlphabet } from "nanoid";
+import { Prisma } from "@prisma/client";
 import type { WebSocket } from "ws";
 import {
   LOBBY_CODE_ALPHABET,
@@ -55,7 +56,41 @@ export class LobbyManager {
     });
   }
 
-  async createLobby(user: { id: string; telegramId: string; displayName: string; avatarUrl: string | null }, totalRounds: number) {
+  /**
+   * Credits a completed Telegram Stars payment. Idempotent on
+   * telegramPaymentChargeId so a duplicate `successful_payment` update
+   * (Telegram retries webhooks/bot updates) never double-credits a user.
+   * Returns false if the charge was already recorded or the user is unknown.
+   */
+  async creditStarPayment(telegramId: string, chargeId: string, starsAmount: number, payload: string): Promise<boolean> {
+    const existing = await prisma.starPayment.findUnique({ where: { telegramPaymentChargeId: chargeId } });
+    if (existing) return false;
+
+    const user = await prisma.user.findUnique({ where: { telegramId } });
+    if (!user) return false;
+
+    try {
+      await prisma.$transaction([
+        prisma.starPayment.create({ data: { telegramPaymentChargeId: chargeId, userId: user.id, starsAmount, payload } }),
+        prisma.user.update({ where: { id: user.id }, data: { isSupporter: true, totalStarsPaid: { increment: starsAmount } } }),
+      ]);
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") return false;
+      throw err;
+    }
+
+    // Reflect the new supporter badge immediately for anyone currently in a lobby.
+    for (const room of this.rooms.values()) {
+      const player = room.players.get(user.id);
+      if (player) {
+        player.isSupporter = true;
+        this.sendLobbyState(room);
+      }
+    }
+    return true;
+  }
+
+  async createLobby(user: { id: string; telegramId: string; displayName: string; avatarUrl: string | null; isSupporter: boolean }, totalRounds: number) {
     let code = genCode();
     while (this.codeToId.has(code) || (await prisma.lobby.findUnique({ where: { code } }))) {
       code = genCode();
@@ -88,7 +123,7 @@ export class LobbyManager {
     return room;
   }
 
-  async joinLobby(code: string, user: { id: string; telegramId: string; displayName: string; avatarUrl: string | null }) {
+  async joinLobby(code: string, user: { id: string; telegramId: string; displayName: string; avatarUrl: string | null; isSupporter: boolean }) {
     const room = this.getRoomByCode(code);
     if (!room) throw new GameError("Lobby not found");
     if (room.status !== "waiting") throw new GameError("Game already started");
@@ -497,7 +532,11 @@ function findByLobbyPlayerId(room: LobbyRoom, lobbyPlayerId: string): PlayerConn
   return undefined;
 }
 
-function toPlayerConn(lobbyPlayerId: string, user: { id: string; telegramId: string; displayName: string; avatarUrl: string | null }, isHost: boolean): PlayerConn {
+function toPlayerConn(
+  lobbyPlayerId: string,
+  user: { id: string; telegramId: string; displayName: string; avatarUrl: string | null; isSupporter?: boolean },
+  isHost: boolean,
+): PlayerConn {
   return {
     lobbyPlayerId,
     userId: user.id,
@@ -510,6 +549,7 @@ function toPlayerConn(lobbyPlayerId: string, user: { id: string; telegramId: str
     ws: null,
     wins: 0,
     losses: 0,
+    isSupporter: user.isSupporter ?? false,
   };
 }
 
@@ -524,6 +564,7 @@ export function serializeLobby(room: LobbyRoom): LobbyState {
     connected: p.connected,
     wins: p.wins,
     losses: p.losses,
+    isSupporter: p.isSupporter,
   }));
   return {
     id: room.id,

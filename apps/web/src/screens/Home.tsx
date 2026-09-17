@@ -1,13 +1,15 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { createLobby, joinLobby, ApiError } from "../lib/api";
-import { getStartParam, isTelegram } from "../lib/telegram";
+import { SUPPORTER_STARS_PRICE } from "@accuse/shared";
+import { createLobby, joinLobby, createSupporterInvoiceLink, ApiError } from "../lib/api";
+import { getStartParam, isTelegram, openInvoice, hapticNotify } from "../lib/telegram";
 import { Toast } from "../components/Toast";
 
 export function Home() {
   const navigate = useNavigate();
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
+  const [supportBusy, setSupportBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [devTelegramId, setDevTelegramId] = useState("");
 
@@ -43,6 +45,25 @@ export function Home() {
       setError(e instanceof ApiError ? e.message : "Failed to join lobby");
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function handleSupport() {
+    setSupportBusy(true);
+    setError(null);
+    try {
+      const { link } = await createSupporterInvoiceLink();
+      const status = await openInvoice(link);
+      if (status === "paid") {
+        hapticNotify("success");
+        setError("⭐ Thank you for supporting ACCUSE! Your badge is live.");
+      } else if (status === "failed") {
+        setError("Payment failed. Please try again.");
+      }
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : "Couldn't start payment");
+    } finally {
+      setSupportBusy(false);
     }
   }
 
@@ -85,6 +106,12 @@ export function Home() {
             Join Lobby
           </button>
         </div>
+
+        {isTelegram() && (
+          <button className="btn btn-secondary" onClick={handleSupport} disabled={supportBusy}>
+            ⭐ Support ACCUSE ({SUPPORTER_STARS_PRICE} Stars)
+          </button>
+        )}
 
         {!isTelegram() && (
           <div className="card stack">

@@ -15,6 +15,7 @@ export interface PublicPlayer {
   connected: boolean;
   wins: number;
   losses: number;
+  isSupporter: boolean;
 }
 
 export interface LobbyState {

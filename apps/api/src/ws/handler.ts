@@ -2,7 +2,7 @@ import type { FastifyInstance } from "fastify";
 import type { WebSocket } from "ws";
 import { wsClientMessageSchema, CHAT_RATE_LIMIT_PER_10S } from "@accuse/shared";
 import { env } from "../env.js";
-import { validateInitData, InitDataError } from "../telegram/initData.js";
+import { validateInitData, telegramDisplayName, InitDataError } from "../telegram/initData.js";
 import { lobbyManager, GameError } from "../game/manager.js";
 import type { LobbyRoom } from "../game/types.js";
 
@@ -105,9 +105,4 @@ export function registerWebsocket(app: FastifyInstance) {
 
 function send(ws: WebSocket, event: unknown) {
   if (ws.readyState === ws.OPEN) ws.send(JSON.stringify(event));
-}
-
-function telegramDisplayName(user: { first_name: string; last_name?: string; username?: string }) {
-  const name = [user.first_name, user.last_name].filter(Boolean).join(" ").trim();
-  return name || user.username || "Player";
 }

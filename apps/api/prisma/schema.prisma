@@ -8,18 +8,31 @@ datasource db {
 }
 
 model User {
-  id          String   @id @default(uuid())
-  telegramId  String   @unique
-  displayName String
-  avatarUrl   String?
-  wins        Int      @default(0)
-  losses      Int      @default(0)
-  createdAt   DateTime @default(now())
+  id             String   @id @default(uuid())
+  telegramId     String   @unique
+  displayName    String
+  avatarUrl      String?
+  wins           Int      @default(0)
+  losses         Int      @default(0)
+  isSupporter    Boolean  @default(false)
+  totalStarsPaid Int      @default(0)
+  createdAt      DateTime @default(now())
 
   hostedLobbies Lobby[]       @relation("HostedLobbies")
   lobbyPlayers  LobbyPlayer[]
   answers       Answer[]
   votes         Vote[]
+  starPayments  StarPayment[]
+}
+
+model StarPayment {
+  id                      String   @id @default(uuid())
+  telegramPaymentChargeId String   @unique
+  userId                  String
+  user                    User     @relation(fields: [userId], references: [id])
+  starsAmount             Int
+  payload                 String
+  createdAt               DateTime @default(now())
 }
 
 model Lobby {

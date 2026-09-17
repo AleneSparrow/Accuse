@@ -10,6 +10,10 @@ export const createLobbySchema = z.object({
   totalRounds: z.number().int().min(1).max(6).optional(),
 });
 
+export const createSupporterInvoiceSchema = z.object({
+  initData: z.string().min(1),
+});
+
 export const joinLobbySchema = z.object({
   initData: z.string().min(1),
   code: z.string().min(4).max(8),

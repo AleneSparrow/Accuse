@@ -64,6 +64,7 @@ export function Lobby() {
           <div className="player-row" key={p.id}>
             <PlayerAvatar name={p.displayName} avatarUrl={p.avatarUrl} />
             <span className="player-name">
+              {p.isSupporter ? "⭐ " : ""}
               {p.displayName}
               {p.telegramId === myUserId ? " (you)" : ""}
             </span>

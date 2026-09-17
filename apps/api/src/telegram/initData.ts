@@ -76,6 +76,11 @@ export function validateInitData(
   return { user, authDate, raw: initData };
 }
 
+export function telegramDisplayName(user: { first_name: string; last_name?: string; username?: string }): string {
+  const name = [user.first_name, user.last_name].filter(Boolean).join(" ").trim();
+  return name || user.username || "Player";
+}
+
 export class InitDataError extends Error {
   constructor(message: string) {
     super(message);
