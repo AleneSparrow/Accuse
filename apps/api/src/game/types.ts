@@ -31,7 +31,7 @@ export interface RoundInternal {
   phaseEndsAt: string | null;
   answers: Map<string, RoundAnswerInternal>; // lobbyPlayerId -> answer
   votes: Map<string, string>; // voterLobbyPlayerId -> votedForLobbyPlayerId
-  aiSuggestionSent: boolean;
+  aiSuggestionCount: number;
   timer: NodeJS.Timeout | null;
 }
 

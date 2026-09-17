@@ -9,6 +9,16 @@ import { registerWebsocket } from "./ws/handler.js";
 
 const app = Fastify({ logger: true });
 
+// Defense in depth: a single unhandled rejection anywhere (e.g. a missed await
+// in a future change) would otherwise crash the whole process and drop every
+// concurrent game. Log it and keep serving instead.
+process.on("unhandledRejection", (reason) => {
+  app.log.error({ err: reason }, "unhandled rejection");
+});
+process.on("uncaughtException", (err) => {
+  app.log.error({ err }, "uncaught exception");
+});
+
 await app.register(cors, { origin: corsOrigins, credentials: true });
 await app.register(websocketPlugin);
 

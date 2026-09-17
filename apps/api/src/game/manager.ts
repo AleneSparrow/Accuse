@@ -20,6 +20,7 @@ import { generateScenario, suggestImpostorAnswer } from "../ai/impostor.js";
 import type { LobbyRoom, PlayerConn, RoundInternal } from "./types.js";
 
 const genCode = customAlphabet(LOBBY_CODE_ALPHABET, LOBBY_CODE_LENGTH);
+const MAX_AI_SUGGESTIONS_PER_ROUND = 3;
 
 type Broadcast = (room: LobbyRoom, event: unknown, onlyUserId?: string) => void;
 
@@ -182,14 +183,41 @@ export class LobbyManager {
       phaseEndsAt: null,
       answers: new Map(),
       votes: new Map(),
-      aiSuggestionSent: false,
+      aiSuggestionCount: 0,
       timer: null,
     };
     room.round = round;
 
     this.sendRoundStateToAll(room);
     // brief beat on the prompt screen, then move to answering
-    round.timer = setTimeout(() => this.enterPhase(room, "answer", PHASE_DURATIONS_MS.answer), 3_500);
+    round.timer = setTimeout(
+      () => this.runTimer(room, () => this.enterPhase(room, "answer", PHASE_DURATIONS_MS.answer)),
+      3_500,
+    );
+  }
+
+  /**
+   * All round-phase timers eventually call async code (AI generation, Prisma writes).
+   * A bare setTimeout(async () => ...) turns any rejection into an unhandled
+   * rejection that can crash the whole process — taking every concurrent game
+   * down with it. Route every timer callback through here so a failure only
+   * ends the one room it happened in.
+   */
+  private runTimer(room: LobbyRoom, fn: () => void | Promise<void>) {
+    Promise.resolve()
+      .then(fn)
+      .catch((err) => {
+        console.error("[LobbyManager] round timer failed", err);
+        this.failRound(room);
+      });
+  }
+
+  private failRound(room: LobbyRoom) {
+    if (room.round?.timer) clearTimeout(room.round.timer);
+    room.round = null;
+    room.status = "finished";
+    this.broadcast(room, { type: "error", message: "This game hit an error and had to end. Please start a new one." });
+    this.sendLobbyState(room);
   }
 
   private enterPhase(room: LobbyRoom, phase: RoundInternal["phase"], durationMs: number) {
@@ -198,7 +226,7 @@ export class LobbyManager {
     round.phase = phase;
     round.phaseEndsAt = new Date(Date.now() + durationMs).toISOString();
     if (round.timer) clearTimeout(round.timer);
-    round.timer = setTimeout(() => this.advancePhase(room), durationMs);
+    round.timer = setTimeout(() => this.runTimer(room, () => this.advancePhase(room)), durationMs);
     this.sendRoundStateToAll(room);
   }
 
@@ -260,13 +288,17 @@ export class LobbyManager {
     const isFinalRound = round.roundNumber >= room.totalRounds;
     this.sendRoundStateToAll(room, isFinalRound);
 
-    round.timer = setTimeout(async () => {
-      if (isFinalRound) {
-        await this.endGame(room);
-      } else {
-        await this.beginRound(room, round.roundNumber + 1, round.impostorPlayerId);
-      }
-    }, PHASE_DURATIONS_MS.reveal);
+    round.timer = setTimeout(
+      () =>
+        this.runTimer(room, async () => {
+          if (isFinalRound) {
+            await this.endGame(room);
+          } else {
+            await this.beginRound(room, round.roundNumber + 1, round.impostorPlayerId);
+          }
+        }),
+      PHASE_DURATIONS_MS.reveal,
+    );
   }
 
   private async persistRound(room: LobbyRoom, round: RoundInternal) {
@@ -367,6 +399,10 @@ export class LobbyManager {
     const player = room.players.get(userId);
     if (!round || !player) return;
     if (player.lobbyPlayerId !== round.impostorPlayerId) throw new GameError("Only the impostor gets AI help");
+    if (round.aiSuggestionCount >= MAX_AI_SUGGESTIONS_PER_ROUND) {
+      throw new GameError("No more AI suggestions this round");
+    }
+    round.aiSuggestionCount += 1;
     const otherAnswers = [...round.answers.values()].map((a) => a.text);
     const suggestion = await suggestImpostorAnswer(round.prompt, otherAnswers);
     this.broadcast(room, { type: "ai_suggestion", text: suggestion }, userId);
