@@ -80,9 +80,9 @@ export function shareInviteLink(botUsername: string, lobbyCode: string) {
   void navigator.clipboard?.writeText(url);
 }
 
-export function switchToInlineInvite() {
+export function switchToInlineInvite(lobbyCode: string) {
   try {
-    getWebApp()?.switchInlineQuery?.("invite", ["users", "groups", "channels"]);
+    getWebApp()?.switchInlineQuery?.(lobbyCode, ["users", "groups", "channels"]);
   } catch {
     // ignore
   }

@@ -95,7 +95,7 @@ export function Lobby() {
           Invite Friends
         </button>
         {isTelegram() && (
-          <button className="btn btn-secondary" onClick={switchToInlineInvite}>
+          <button className="btn btn-secondary" onClick={() => switchToInlineInvite(lobby.code)}>
             Share to a chat
           </button>
         )}

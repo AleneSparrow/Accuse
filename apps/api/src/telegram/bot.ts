@@ -21,17 +21,22 @@ if (bot) {
   });
 
   bot.on("inline_query", async (ctx) => {
-    const appUrl = miniAppUrl();
+    const lobbyCode = ctx.inlineQuery.query.trim();
+    const deepLink = `https://t.me/${ctx.me.username}?startapp=${encodeURIComponent(lobbyCode || "join")}`;
     await ctx.answerInlineQuery(
       [
         {
           type: "article",
           id: "invite",
-          title: "Invite to ACCUSE",
+          title: lobbyCode ? `Invite to ACCUSE — lobby ${lobbyCode}` : "Invite to ACCUSE",
+          description: "Sends a tappable invite link — web_app buttons don't work outside private chats with the bot.",
           input_message_content: {
-            message_text: "🎭 Join my round of ACCUSE — find the AI impostor before it's too late.",
+            message_text: `🎭 Join my round of ACCUSE — find the AI impostor before it's too late.\n${deepLink}`,
           },
-          reply_markup: new InlineKeyboard().webApp("Open ACCUSE", appUrl),
+          // Note: a web_app InlineKeyboardButton is only usable in a private chat with the
+          // bot itself — Telegram silently blocks sending it in any other chat. Use a plain
+          // url button (t.me deep link) so the invite actually sends.
+          reply_markup: new InlineKeyboard().url("Open ACCUSE", deepLink),
         },
       ],
       { cache_time: 0 },
